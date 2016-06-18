@@ -20,7 +20,7 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
     var session: NSURLSession!
 
     var pendingRequests = [AVAssetResourceLoadingRequest]()
-    var receivedData: NSMutableData?
+    var songData: NSMutableData?
     var response: NSURLResponse?
 
     override func viewDidLoad() {
@@ -30,6 +30,8 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
 
         let playerItem = AVPlayerItem(asset: asset)
+        playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
+
         self.player = AVPlayer(playerItem: playerItem)
 
         let playerController = AVPlayerViewController()
@@ -38,13 +40,10 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         self.view.addSubview(playerController.view)
         playerController.view.frame = self.view.frame
 
-        playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
+        self.session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
     }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-
-    }
+    // MARK: AVAssetResourceLoaderDelegate
 
     func resourceLoader(resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
 
@@ -53,7 +52,6 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
                 urlComponents.scheme = "http"
 
                 let request = NSURLRequest(URL: urlComponents.URL!)
-                self.session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
                 self.dataTask = self.session.dataTaskWithRequest(request)
                 self.dataTask?.resume()
             }
@@ -68,8 +66,10 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         self.pendingRequests = self.pendingRequests.filter{$0 != loadingRequest}
     }
 
+    // MARK: NSURLSessionTaskDelegate
+
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {
-        self.receivedData = NSMutableData()
+        self.songData = NSMutableData()
         self.response = response
 
         self.processPendingRequests()
@@ -78,7 +78,7 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
     }
 
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData data: NSData) {
-        self.receivedData?.appendData(data)
+        self.songData?.appendData(data)
 
         self.processPendingRequests()
     }
@@ -86,23 +86,30 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
     func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
         self.processPendingRequests()
 
+        print("Data task is completed")
         let cachedFilePath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("cachedVideo.mp4")
 
         do {
-            try self.receivedData?.writeToFile(cachedFilePath, options: .AtomicWrite)
+            try self.songData?.writeToFile(cachedFilePath, options: .AtomicWrite)
         }
         catch let error {
             print("Save cached video error:\(error)")
         }
     }
 
+    // MARK: Helpers
+
     func processPendingRequests() {
         var completedRequests = [AVAssetResourceLoadingRequest]()
 
         for request in self.pendingRequests {
 
-            if let info = request.contentInformationRequest, let dataRequest = request.dataRequest {
-                self.fillInContentInformation(info)
+            if let dataRequest = request.dataRequest {
+
+                if let info = request.contentInformationRequest {
+                    self.fillInContentInformation(info)
+                }
+
                 let didRespondCompletely = self.respondWithDataForRequest(dataRequest)
 
                 if didRespondCompletely {
@@ -137,7 +144,7 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
             startOffset = dataRequest.currentOffset
         }
 
-        guard let data = self.receivedData else {
+        guard let data = self.songData else {
             return false
         }
 
@@ -148,7 +155,8 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         let unreadBytes = Int64(data.length) - startOffset
         let numberOfBytesToRespondWith = min(Int64(dataRequest.requestedLength), unreadBytes)
 
-        dataRequest.respondWithData(data.subdataWithRange(NSMakeRange(Int(startOffset), Int(numberOfBytesToRespondWith))))
+        let respondData = data.subdataWithRange(NSMakeRange(Int(startOffset), Int(numberOfBytesToRespondWith)))
+        dataRequest.respondWithData(respondData)
 
         let endOffset = startOffset + dataRequest.requestedLength
         let didRespondFully = data.length >= Int(endOffset);
@@ -162,6 +170,9 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         if status == .ReadyToPlay
         {
            self.player.play()
+        }
+        else {
+            print("Error")
         }
     }
 }
