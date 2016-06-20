@@ -26,7 +26,13 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        self.playOnline()
+        //self.playFromCache()
+    }
+
+    func playOnline() {
         let asset = AVURLAsset(URL: NSURL(string: "fakeProtocol://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")!)
+
         asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
 
         let playerItem = AVPlayerItem(asset: asset)
@@ -41,6 +47,19 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         playerController.view.frame = self.view.frame
 
         self.session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
+    }
+
+    func playFromCache() {
+        let videoURLString = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("cachedVideo.mp4")
+        let url = NSURL(fileURLWithPath: videoURLString)
+        self.player = AVPlayer(URL: url)
+        let playerController = AVPlayerViewController()
+        playerController.player = player
+        self.addChildViewController(playerController)
+        self.view.addSubview(playerController.view)
+        playerController.view.frame = self.view.frame
+
+        self.player.play()
     }
 
     // MARK: AVAssetResourceLoaderDelegate
