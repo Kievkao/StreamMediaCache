@@ -11,26 +11,12 @@ import AVKit
 import AVFoundation
 import MobileCoreServices
 
-class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSessionTaskDelegate {
+class ViewController: UIViewController {
 
-    var player: AVPlayer!
+    var playerCache: AVPlayerCache!
 
-    let loader_queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)
-    var dataTask: NSURLSessionDataTask?
-
-    lazy var session: NSURLSession = {
-        return NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
-    }()
-
-    var pendingRequests = [AVAssetResourceLoadingRequest]()
-    var songData: NSMutableData?
-    var response: NSURLResponse?
-
-    let testVideoURLString = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"
-    let CachedFileName = "cachedVideo.mp4"
-    var cachedFilePath: String {
-        return (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(CachedFileName)
-    }
+    let testVideoURL = NSURL(string:"http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")!
+    let testVideoName = "big_buck_bunny.mp4"
 
     var playerController = AVPlayerViewController()
     @IBOutlet weak var playFromCacheButton: UIBarButtonItem!
@@ -42,166 +28,23 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
     }
 
     func setPlayFromCacheButtonVisibility() {
-        let cachedVideoPath = self.cachedFilePath
-
-        self.playFromCacheButton.enabled = NSFileManager.defaultManager().fileExistsAtPath(cachedVideoPath)
+        self.playFromCacheButton.enabled = AVPlayerCache.isCachedFileAvailable(fileName: testVideoName)
     }
 
-    // MARK: Actions
-
     @IBAction func playFromCacheAction(sender: UIBarButtonItem) {
-
-        let url = NSURL(fileURLWithPath: self.cachedFilePath)
-
-        self.player = AVPlayer(URL: url)
-        self.playerController.player = player
-        self.presentViewController(self.playerController, animated: true, completion: nil)
-        self.player.play()
+        self.startPlayerWithOnlineCaching(false)
     }
 
     @IBAction func playOnlineAction(sender: UIBarButtonItem) {
-        let asset = AVURLAsset(URL: NSURL(string: "fakeProtocol://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")!)
-        asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
+        self.startPlayerWithOnlineCaching(true)
+    }
 
-        let playerItem = AVPlayerItem(asset: asset)
-        playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
+    func startPlayerWithOnlineCaching(onlineCaching: Bool) {
+        self.playerCache = AVPlayerCache(URL: testVideoURL, onlineCaching: onlineCaching)
 
-        self.player = AVPlayer(playerItem: playerItem)
-        self.playerController.player = player
+        self.playerController.player = self.playerCache.player
         self.presentViewController(self.playerController, animated: true, completion: nil)
-    }
-    
-    // MARK: AVAssetResourceLoaderDelegate
-
-    func resourceLoader(resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
-
-        if self.dataTask == nil {
-            if let urlComponents = NSURLComponents(URL: loadingRequest.request.URL!, resolvingAgainstBaseURL: false) {
-                urlComponents.scheme = "http"
-
-                let request = NSURLRequest(URL: urlComponents.URL!)
-                self.dataTask = self.session.dataTaskWithRequest(request)
-                self.dataTask?.resume()
-            }
-        }
-
-        self.pendingRequests.append(loadingRequest)
-
-        return true
-    }
-
-    func resourceLoader(resourceLoader: AVAssetResourceLoader, didCancelLoadingRequest loadingRequest: AVAssetResourceLoadingRequest) {
-        self.pendingRequests = self.pendingRequests.filter{$0 != loadingRequest}
-    }
-
-    // MARK: NSURLSessionTaskDelegate
-
-    func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {
-        self.songData = NSMutableData()
-        self.response = response
-
-        self.processPendingRequests()
-
-        completionHandler(.Allow)
-    }
-
-    func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData data: NSData) {
-        self.songData?.appendData(data)
-
-        self.processPendingRequests()
-    }
-
-    func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
-        self.processPendingRequests()
-
-        print("Data task is completed")
-        let cachedFilePath = self.cachedFilePath
-
-        do {
-            try self.songData?.writeToFile(cachedFilePath, options: .AtomicWrite)
-        }
-        catch let error {
-            print("Save cached video error:\(error)")
-        }
-    }
-
-    // MARK: Helpers
-
-    func processPendingRequests() {
-        var completedRequests = [AVAssetResourceLoadingRequest]()
-
-        for request in self.pendingRequests {
-
-            if let dataRequest = request.dataRequest {
-
-                if let info = request.contentInformationRequest {
-                    self.fillInContentInformation(info)
-                }
-
-                let didRespondCompletely = self.respondWithDataForRequest(dataRequest)
-
-                if didRespondCompletely {
-                    completedRequests.append(request)
-                    request.finishLoading()
-                }
-            }
-        }
-
-        let pendingSet = Set(self.pendingRequests)
-        let completedSet = Set(completedRequests)
-        self.pendingRequests = Array(pendingSet.subtract(completedSet))
-    }
-
-    func fillInContentInformation(infoRequest: AVAssetResourceLoadingContentInformationRequest) {
-        guard let response = self.response, let mimeType = response.MIMEType else {
-            return
-        }
-
-        if let contentType = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, nil) {
-            infoRequest.byteRangeAccessSupported = true
-            infoRequest.contentType = contentType.takeRetainedValue() as String
-            infoRequest.contentLength = response.expectedContentLength
-        }
-    }
-
-    func respondWithDataForRequest(dataRequest: AVAssetResourceLoadingDataRequest) -> Bool {
-
-        var startOffset = dataRequest.requestedOffset
-
-        if dataRequest.currentOffset != 0 {
-            startOffset = dataRequest.currentOffset
-        }
-
-        guard let data = self.songData else {
-            return false
-        }
-
-        guard Int64(data.length) >= startOffset else {
-            return false
-        }
-
-        let unreadBytes = Int64(data.length) - startOffset
-        let numberOfBytesToRespondWith = min(Int64(dataRequest.requestedLength), unreadBytes)
-
-        let respondData = data.subdataWithRange(NSMakeRange(Int(startOffset), Int(numberOfBytesToRespondWith)))
-        dataRequest.respondWithData(respondData)
-
-        let endOffset = startOffset + dataRequest.requestedLength
-        let didRespondFully = data.length >= Int(endOffset);
-
-        return didRespondFully
-    }
-
-    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
-
-        let status = self.player.currentItem?.status
-        if status == .ReadyToPlay
-        {
-           self.player.play()
-        }
-        else {
-            print("Error")
-        }
+        self.playerCache.play()
     }
 }
 

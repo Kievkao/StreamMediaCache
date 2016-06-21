@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C592A76D1D1946A2007EB8C8 /* AVPlayerCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = C592A76C1D1946A2007EB8C8 /* AVPlayerCache.swift */; };
 		C5E812831D193E5200897BA1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E8127B1D193E5200897BA1 /* AppDelegate.swift */; };
 		C5E812841D193E5200897BA1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5E8127C1D193E5200897BA1 /* Assets.xcassets */; };
 		C5E812851D193E5200897BA1 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C5E8127D1D193E5200897BA1 /* LaunchScreen.storyboard */; };
@@ -16,6 +17,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		C592A76C1D1946A2007EB8C8 /* AVPlayerCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AVPlayerCache.swift; sourceTree = "<group>"; };
 		C5BDA44D1D14067D0041A4D1 /* StreamMediaCache.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StreamMediaCache.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5E8127B1D193E5200897BA1 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C5E8127C1D193E5200897BA1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -55,9 +57,10 @@
 		C5E8127A1D193E5200897BA1 /* StreamMediaCache */ = {
 			isa = PBXGroup;
 			children = (
-				C5E8127B1D193E5200897BA1 /* AppDelegate.swift */,
+				C592A76C1D1946A2007EB8C8 /* AVPlayerCache.swift */,
 				C5E812821D193E5200897BA1 /* ViewController.swift */,
 				C5E8127C1D193E5200897BA1 /* Assets.xcassets */,
+				C5E8127B1D193E5200897BA1 /* AppDelegate.swift */,
 				C5E8127D1D193E5200897BA1 /* LaunchScreen.storyboard */,
 				C5E8127F1D193E5200897BA1 /* Main.storyboard */,
 				C5E812811D193E5200897BA1 /* Info.plist */,
@@ -138,6 +141,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C5E812881D193E5200897BA1 /* ViewController.swift in Sources */,
+				C592A76D1D1946A2007EB8C8 /* AVPlayerCache.swift in Sources */,
 				C5E812831D193E5200897BA1 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
