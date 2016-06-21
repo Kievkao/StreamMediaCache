@@ -1,5 +1,5 @@
 //
-//  AVPlayerCache.swift
+//  AVPlayerCacheWrapper.swift
 //  StreamMediaCache
 //
 //  Created by Andrii Kravchenko on 6/21/16.
@@ -10,11 +10,17 @@ import AVKit
 import AVFoundation
 import MobileCoreServices
 
-class AVPlayerCache: NSObject, AVAssetResourceLoaderDelegate, NSURLSessionTaskDelegate {
+protocol AVPlayerCacheWrapperDelegate: class {
+    func cachingDidStartInPath(path: String)
+    func cachingDidFinishInPath(path: String, withError: NSError)
+}
+
+class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessionTaskDelegate {
 
     var player: AVPlayer?
+    var cachedFilesDirectory: String = DefaultDirectory
+    weak var delegate: AVPlayerCacheWrapperDelegate?
 
-    private let loader_queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)
     private var dataTask: NSURLSessionDataTask?
 
     private lazy var session: NSURLSession = {
@@ -29,10 +35,17 @@ class AVPlayerCache: NSObject, AVAssetResourceLoaderDelegate, NSURLSessionTaskDe
     private var initialUrlScheme: String?
 
     private static let DefaultDirectory = NSTemporaryDirectory()
-    var cachedFilesDirectory: String = DefaultDirectory
 
     private(set) var cacheEnabled: Bool?
     private(set) var fileName: String?
+
+    private lazy var cachedFilePath: String = {
+        guard let fileName = self.fileName else {
+            print("Filename is nil, unable to cache media")
+            return ""
+        }
+        return (self.cachedFilesDirectory as NSString).stringByAppendingPathComponent(fileName)
+    }()
 
     static func isCachedFileAvailable(directory directory: String = DefaultDirectory, fileName: String) -> Bool {
         return NSFileManager.defaultManager().fileExistsAtPath((directory as NSString).stringByAppendingPathComponent(fileName))
@@ -106,15 +119,14 @@ class AVPlayerCache: NSObject, AVAssetResourceLoaderDelegate, NSURLSessionTaskDe
     func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
         self.processPendingRequests()
 
-        print("Data task is completed")
-        let cachedFilePath = (self.cachedFilesDirectory as NSString).stringByAppendingPathComponent(self.fileName!)
-
         do {
             try self.mediaData?.writeToFile(cachedFilePath, options: .AtomicWrite)
         }
         catch let error {
             print("Save cached video error:\(error)")
         }
+
+        print("Data task is completed")
     }
 
     // MARK: Helpers

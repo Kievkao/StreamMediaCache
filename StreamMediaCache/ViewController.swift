@@ -13,7 +13,7 @@ import MobileCoreServices
 
 class ViewController: UIViewController {
 
-    var playerCache: AVPlayerCache!
+    var playerCache: AVPlayerCacheWrapper!
 
     let testVideoURL = NSURL(string:"http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")!
     let testVideoName = "big_buck_bunny.mp4"
@@ -28,7 +28,7 @@ class ViewController: UIViewController {
     }
 
     func setPlayFromCacheButtonVisibility() {
-        self.playFromCacheButton.enabled = AVPlayerCache.isCachedFileAvailable(fileName: testVideoName)
+        self.playFromCacheButton.enabled = AVPlayerCacheWrapper.isCachedFileAvailable(fileName: testVideoName)
     }
 
     @IBAction func playFromCacheAction(sender: UIBarButtonItem) {
@@ -40,7 +40,7 @@ class ViewController: UIViewController {
     }
 
     func startPlayerWithOnlineCaching(onlineCaching: Bool) {
-        self.playerCache = AVPlayerCache(URL: testVideoURL, onlineCaching: onlineCaching)
+        self.playerCache = AVPlayerCacheWrapper(URL: testVideoURL, onlineCaching: onlineCaching)
 
         self.playerController.player = self.playerCache.player
         self.presentViewController(self.playerController, animated: true, completion: nil)
