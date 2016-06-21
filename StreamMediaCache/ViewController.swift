@@ -17,51 +17,60 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
 
     let loader_queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)
     var dataTask: NSURLSessionDataTask?
-    var session: NSURLSession!
+
+    lazy var session: NSURLSession = {
+        return NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
+    }()
 
     var pendingRequests = [AVAssetResourceLoadingRequest]()
     var songData: NSMutableData?
     var response: NSURLResponse?
 
+    let testVideoURLString = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"
+    let CachedFileName = "cachedVideo.mp4"
+    var cachedFilePath: String {
+        return (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent(CachedFileName)
+    }
+
+    var playerController = AVPlayerViewController()
+    @IBOutlet weak var playFromCacheButton: UIBarButtonItem!
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        self.playOnline()
-        //self.playFromCache()
+        self.setPlayFromCacheButtonVisibility()
     }
 
-    func playOnline() {
-        let asset = AVURLAsset(URL: NSURL(string: "fakeProtocol://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")!)
+    func setPlayFromCacheButtonVisibility() {
+        let cachedVideoPath = self.cachedFilePath
 
+        self.playFromCacheButton.enabled = NSFileManager.defaultManager().fileExistsAtPath(cachedVideoPath)
+    }
+
+    // MARK: Actions
+
+    @IBAction func playFromCacheAction(sender: UIBarButtonItem) {
+
+        let url = NSURL(fileURLWithPath: self.cachedFilePath)
+
+        self.player = AVPlayer(URL: url)
+        self.playerController.player = player
+        self.presentViewController(self.playerController, animated: true, completion: nil)
+        self.player.play()
+    }
+
+    @IBAction func playOnlineAction(sender: UIBarButtonItem) {
+        let asset = AVURLAsset(URL: NSURL(string: "fakeProtocol://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4")!)
         asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
 
         let playerItem = AVPlayerItem(asset: asset)
         playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
 
         self.player = AVPlayer(playerItem: playerItem)
-
-        let playerController = AVPlayerViewController()
-        playerController.player = player
-        self.addChildViewController(playerController)
-        self.view.addSubview(playerController.view)
-        playerController.view.frame = self.view.frame
-
-        self.session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
+        self.playerController.player = player
+        self.presentViewController(self.playerController, animated: true, completion: nil)
     }
-
-    func playFromCache() {
-        let videoURLString = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("cachedVideo.mp4")
-        let url = NSURL(fileURLWithPath: videoURLString)
-        self.player = AVPlayer(URL: url)
-        let playerController = AVPlayerViewController()
-        playerController.player = player
-        self.addChildViewController(playerController)
-        self.view.addSubview(playerController.view)
-        playerController.view.frame = self.view.frame
-
-        self.player.play()
-    }
-
+    
     // MARK: AVAssetResourceLoaderDelegate
 
     func resourceLoader(resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
@@ -106,7 +115,7 @@ class ViewController: UIViewController, AVAssetResourceLoaderDelegate, NSURLSess
         self.processPendingRequests()
 
         print("Data task is completed")
-        let cachedFilePath = (NSTemporaryDirectory() as NSString).stringByAppendingPathComponent("cachedVideo.mp4")
+        let cachedFilePath = self.cachedFilePath
 
         do {
             try self.songData?.writeToFile(cachedFilePath, options: .AtomicWrite)

@@ -56,11 +56,11 @@
 			isa = PBXGroup;
 			children = (
 				C5E8127B1D193E5200897BA1 /* AppDelegate.swift */,
+				C5E812821D193E5200897BA1 /* ViewController.swift */,
 				C5E8127C1D193E5200897BA1 /* Assets.xcassets */,
 				C5E8127D1D193E5200897BA1 /* LaunchScreen.storyboard */,
 				C5E8127F1D193E5200897BA1 /* Main.storyboard */,
 				C5E812811D193E5200897BA1 /* Info.plist */,
-				C5E812821D193E5200897BA1 /* ViewController.swift */,
 			);
 			path = StreamMediaCache;
 			sourceTree = "<group>";
