@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C5BDA44C1D14067D0041A4D1"
-               BuildableName = "StreamVideoCaching.app"
-               BlueprintName = "StreamVideoCaching"
-               ReferencedContainer = "container:StreamVideoCaching.xcodeproj">
+               BuildableName = "StreamMediaCache.app"
+               BlueprintName = "StreamMediaCache"
+               ReferencedContainer = "container:StreamMediaCache.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C5BDA44C1D14067D0041A4D1"
-            BuildableName = "StreamVideoCaching.app"
-            BlueprintName = "StreamVideoCaching"
-            ReferencedContainer = "container:StreamVideoCaching.xcodeproj">
+            BuildableName = "StreamMediaCache.app"
+            BlueprintName = "StreamMediaCache"
+            ReferencedContainer = "container:StreamMediaCache.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>
@@ -56,9 +56,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C5BDA44C1D14067D0041A4D1"
-            BuildableName = "StreamVideoCaching.app"
-            BlueprintName = "StreamVideoCaching"
-            ReferencedContainer = "container:StreamVideoCaching.xcodeproj">
+            BuildableName = "StreamMediaCache.app"
+            BlueprintName = "StreamMediaCache"
+            ReferencedContainer = "container:StreamMediaCache.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
       <AdditionalOptions>
@@ -75,9 +75,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C5BDA44C1D14067D0041A4D1"
-            BuildableName = "StreamVideoCaching.app"
-            BlueprintName = "StreamVideoCaching"
-            ReferencedContainer = "container:StreamVideoCaching.xcodeproj">
+            BuildableName = "StreamMediaCache.app"
+            BlueprintName = "StreamMediaCache"
+            ReferencedContainer = "container:StreamMediaCache.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
