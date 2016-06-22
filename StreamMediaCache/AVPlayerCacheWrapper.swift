@@ -181,11 +181,7 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
             startOffset = dataRequest.currentOffset
         }
 
-        guard let data = self.mediaData else {
-            return false
-        }
-
-        guard Int64(data.length) >= startOffset else {
+        guard let data = self.mediaData where Int64(data.length) >= startOffset else {
             return false
         }
 
