@@ -28,7 +28,7 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
     }()
 
     private var pendingRequests = [AVAssetResourceLoadingRequest]()
-    private var mediaData: NSMutableData?
+    private var mediaData: KAODataWrapper?
     private var response: NSURLResponse?
 
     private let FakeScheme = "fakeScheme"
@@ -56,18 +56,23 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
 
         cacheEnabled = onlineCaching
 
-        let components = NSURLComponents(URL: URL, resolvingAgainstBaseURL: true)!
-        self.initialUrlScheme = components.scheme
-        self.fileName = components.URL?.lastPathComponent
-        components.scheme = FakeScheme
+        if onlineCaching {
+            let components = NSURLComponents(URL: URL, resolvingAgainstBaseURL: true)!
+            self.initialUrlScheme = components.scheme
+            self.fileName = components.URL?.lastPathComponent
+            components.scheme = FakeScheme
 
-        let asset = AVURLAsset(URL: components.URL!)
-        asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
+            let asset = AVURLAsset(URL: components.URL!)
+            asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
 
-        let playerItem = AVPlayerItem(asset: asset)
-        playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
+            let playerItem = AVPlayerItem(asset: asset)
+            playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
 
-        self.player = AVPlayer(playerItem: playerItem)
+            self.player = AVPlayer(playerItem: playerItem)
+        }
+        else {
+            self.player = AVPlayer(URL: URL)
+        }
     }
 
     func play() {
@@ -102,7 +107,7 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
     // MARK: NSURLSessionTaskDelegate
 
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {
-        self.mediaData = NSMutableData()
+        self.mediaData = KAODataWrapper()
         self.response = response
 
         self.processPendingRequests()
