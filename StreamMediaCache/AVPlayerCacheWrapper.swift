@@ -118,18 +118,18 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
     func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData data: NSData) {
         self.mediaData?.appendData(data)
 
-        self.processPendingRequests()
-    }
-
-    func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
-        self.processPendingRequests()
-
         do {
             try self.mediaData?.writeToFile(cachedFilePath, options: .AtomicWrite)
         }
         catch let error {
             print("Save cached video error:\(error)")
         }
+
+        self.processPendingRequests()
+    }
+
+    func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
+        self.processPendingRequests()
 
         print("Data task is completed")
     }

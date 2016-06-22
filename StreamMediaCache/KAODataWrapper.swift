@@ -12,6 +12,7 @@ class KAODataWrapper {
     private var data = NSMutableData()
 
     private var lengthWithPurged: Int = 0
+    var MaxStoredSizeBytes = 52428800   // 50M
 
     var length: Int { return lengthWithPurged }
 
@@ -22,14 +23,13 @@ class KAODataWrapper {
 
     func subdataWithRange(range: NSRange) -> NSData {
 
-        if range.location > 30000 {
+        if range.location > MaxStoredSizeBytes {
 
-            let location = lengthWithPurged == self.data.length ? range.location : range.location - (lengthWithPurged - self.data.length)
+            let adjustedLocation = range.location - (lengthWithPurged - self.data.length)
 
-            self.data = NSMutableData(data: self.data.subdataWithRange(NSRange(location: location, length: self.data.length - location)))
+            self.data = NSMutableData(data: self.data.subdataWithRange(NSRange(location: adjustedLocation, length: self.data.length - adjustedLocation)))
 
-            let fixedRange = NSRange(location: 0, length: range.length)
-            let requestedData = self.data.subdataWithRange(fixedRange)
+            let requestedData = self.data.subdataWithRange(NSRange(location: 0, length: range.length))
 
             self.data = NSMutableData(data: self.data.subdataWithRange(NSRange(location: range.length, length: self.data.length - range.length)))
 
