@@ -28,22 +28,22 @@ class ViewController: UIViewController {
     }
 
     func setPlayFromCacheButtonVisibility() {
-        self.playFromCacheButton.enabled = AVPlayerCacheWrapper.isCachedFileAvailable(fileName: testVideoName)
+        self.playFromCacheButton.isEnabled = AVPlayerCacheWrapper.isCachedFileAvailable(fileName: testVideoName)
     }
 
     @IBAction func playFromCacheAction(sender: UIBarButtonItem) {
-        self.startPlayerWithOnlineCaching(false)
+        self.startPlayerWithOnlineCaching(onlineCaching: false)
     }
 
     @IBAction func playOnlineAction(sender: UIBarButtonItem) {
-        self.startPlayerWithOnlineCaching(true)
+        self.startPlayerWithOnlineCaching(onlineCaching: true)
     }
 
     func startPlayerWithOnlineCaching(onlineCaching: Bool) {
         self.playerCache = AVPlayerCacheWrapper(URL: testVideoURL, onlineCaching: onlineCaching)
 
         self.playerController.player = self.playerCache.player
-        self.presentViewController(self.playerController, animated: true, completion: nil)
+        self.present(self.playerController, animated: true, completion: nil)
         self.playerCache.play()
     }
 }

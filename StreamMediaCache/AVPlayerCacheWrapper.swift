@@ -9,27 +9,26 @@
 import AVKit
 import AVFoundation
 import MobileCoreServices
+import Foundation
 
 protocol AVPlayerCacheWrapperDelegate: class {
     func cachingDidStartInPath(path: String)
     func cachingDidFinishInPath(path: String, withError: NSError)
 }
 
-class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessionTaskDelegate {
+class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, URLSessionTaskDelegate {
 
     var player: AVPlayer?
     var cachedFilesDirectory: String = DefaultDirectory
     weak var delegate: AVPlayerCacheWrapperDelegate?
 
-    private var dataTask: NSURLSessionDataTask?
+    private var dataTask: URLSessionDataTask?
 
-    private lazy var session: NSURLSession = {
-        return NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: self, delegateQueue: NSOperationQueue.mainQueue())
-    }()
+    private var session = URLSession(configuration: URLSessionConfiguration.default, delegate: self, delegateQueue: OperationQueue.mainQueue)
 
     private var pendingRequests = [AVAssetResourceLoadingRequest]()
     private var mediaData: KAODataWrapper?
-    private var response: NSURLResponse?
+    private var response: URLResponse?
 
     private let FakeScheme = "fakeScheme"
     private var initialUrlScheme: String?
@@ -44,11 +43,11 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
             print("Filename is nil, unable to cache media")
             return ""
         }
-        return (self.cachedFilesDirectory as NSString).stringByAppendingPathComponent(fileName)
+        return (self.cachedFilesDirectory as NSString).appendingPathComponent(fileName)
     }()
 
-    static func isCachedFileAvailable(directory directory: String = DefaultDirectory, fileName: String) -> Bool {
-        return NSFileManager.defaultManager().fileExistsAtPath((directory as NSString).stringByAppendingPathComponent(fileName))
+    static func isCachedFileAvailable(directory: String = DefaultDirectory, fileName: String) -> Bool {
+        return FileManager.default.fileExists(atPath: (directory as NSString).appendingPathComponent(fileName))
     }
 
     init(URL: NSURL, onlineCaching: Bool) {
@@ -57,40 +56,40 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
         cacheEnabled = onlineCaching
 
         if onlineCaching {
-            let components = NSURLComponents(URL: URL, resolvingAgainstBaseURL: true)!
+            let components = NSURLComponents(url: URL as URL, resolvingAgainstBaseURL: true)!
             self.initialUrlScheme = components.scheme
-            self.fileName = components.URL?.lastPathComponent
+            self.fileName = components.url?.lastPathComponent
             components.scheme = FakeScheme
 
-            let asset = AVURLAsset(URL: components.URL!)
-            asset.resourceLoader.setDelegate(self, queue: dispatch_get_main_queue())
+            let asset = AVURLAsset(url: components.url!)
+            asset.resourceLoader.setDelegate(self, queue: DispatchQueue.main)
 
             let playerItem = AVPlayerItem(asset: asset)
-            playerItem.addObserver(self, forKeyPath: "status", options: .New, context: nil)
+            playerItem.addObserver(self, forKeyPath: "status", options: .new, context: nil)
 
             self.player = AVPlayer(playerItem: playerItem)
         }
         else {
-            self.player = AVPlayer(URL: URL)
+            self.player = AVPlayer(url: URL as URL)
         }
     }
 
     func play() {
-        if let cache = cacheEnabled where cache == false || cacheEnabled == nil {
+        if let cache = cacheEnabled , cache == false || cacheEnabled == nil {
             self.player?.play()
         }
     }
 
     // MARK: AVAssetResourceLoaderDelegate
 
-    func resourceLoader(resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
 
         if self.dataTask == nil {
-            if let urlComponents = NSURLComponents(URL: loadingRequest.request.URL!, resolvingAgainstBaseURL: false) {
+            if let urlComponents = NSURLComponents(url: loadingRequest.request.url!, resolvingAgainstBaseURL: false) {
                 urlComponents.scheme = initialUrlScheme
 
-                let request = NSURLRequest(URL: urlComponents.URL!)
-                self.dataTask = self.session.dataTaskWithRequest(request)
+                let request = NSURLRequest(url: urlComponents.url!)
+                self.dataTask = self.session.dataTask(with: request as URLRequest)
                 self.dataTask?.resume()
             }
         }
@@ -100,26 +99,26 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
         return true
     }
 
-    func resourceLoader(resourceLoader: AVAssetResourceLoader, didCancelLoadingRequest loadingRequest: AVAssetResourceLoadingRequest) {
+    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
         self.pendingRequests = self.pendingRequests.filter{$0 != loadingRequest}
     }
 
     // MARK: NSURLSessionTaskDelegate
 
-    func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {
+    private func URLSession(session: URLSession, dataTask: URLSessionDataTask, didReceiveResponse response: URLResponse, completionHandler: (URLSession.ResponseDisposition) -> Void) {
         self.mediaData = KAODataWrapper()
         self.response = response
 
         self.processPendingRequests()
 
-        completionHandler(.Allow)
+        completionHandler(.allow)
     }
 
-    func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveData data: NSData) {
-        self.mediaData?.appendData(data)
+    func URLSession(session: URLSession, dataTask: URLSessionDataTask, didReceiveData data: NSData) {
+        self.mediaData?.appendData(data: data)
 
         do {
-            try self.mediaData?.writeToFile(cachedFilePath, options: .AtomicWrite)
+            try self.mediaData?.writeToFile(path: cachedFilePath, options: .atomicWrite)
         }
         catch let error {
             print("Save cached video error:\(error)")
@@ -128,7 +127,7 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
         self.processPendingRequests()
     }
 
-    func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         self.processPendingRequests()
 
         print("Data task is completed")
@@ -144,10 +143,10 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
             if let dataRequest = request.dataRequest {
 
                 if let info = request.contentInformationRequest {
-                    self.fillInContentInformation(info)
+                    self.fillInContentInformation(infoRequest: info)
                 }
 
-                let didRespondCompletely = self.respondWithDataForRequest(dataRequest)
+                let didRespondCompletely = self.respondWithDataForRequest(dataRequest: dataRequest)
 
                 if didRespondCompletely {
                     completedRequests.append(request)
@@ -158,16 +157,16 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
 
         let pendingSet = Set(self.pendingRequests)
         let completedSet = Set(completedRequests)
-        self.pendingRequests = Array(pendingSet.subtract(completedSet))
+        self.pendingRequests = Array(pendingSet.subtracting(completedSet))
     }
 
     func fillInContentInformation(infoRequest: AVAssetResourceLoadingContentInformationRequest) {
-        guard let response = self.response, let mimeType = response.MIMEType else {
+        guard let response = self.response, let mimeType = response.mimeType else {
             return
         }
 
-        if let contentType = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, nil) {
-            infoRequest.byteRangeAccessSupported = true
+        if let contentType = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil) {
+            infoRequest.isByteRangeAccessSupported = true
             infoRequest.contentType = contentType.takeRetainedValue() as String
             infoRequest.contentLength = response.expectedContentLength
         }
@@ -181,15 +180,15 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
             startOffset = dataRequest.currentOffset
         }
 
-        guard let data = self.mediaData where Int64(data.length) >= startOffset else {
+        guard let data = self.mediaData , Int64(data.length) >= startOffset else {
             return false
         }
 
         let unreadBytes = Int64(data.length) - startOffset
         let numberOfBytesToRespondWith = min(Int64(dataRequest.requestedLength), unreadBytes)
 
-        let respondData = data.subdataWithRange(NSMakeRange(Int(startOffset), Int(numberOfBytesToRespondWith)))
-        dataRequest.respondWithData(respondData)
+        let respondData = data.subdataWithRange(range: NSMakeRange(Int(startOffset), Int(numberOfBytesToRespondWith)))
+        dataRequest.respond(with: respondData as Data)
 
         let endOffset = startOffset + dataRequest.requestedLength
         let didRespondFully = data.length >= Int(endOffset);
@@ -197,10 +196,9 @@ class AVPlayerCacheWrapper: NSObject, AVAssetResourceLoaderDelegate, NSURLSessio
         return didRespondFully
     }
 
-    override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
-        
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         let status = self.player?.currentItem?.status
-        if status == .ReadyToPlay
+        if status == .readyToPlay
         {
             self.player?.play()
         }

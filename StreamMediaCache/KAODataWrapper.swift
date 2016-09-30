@@ -17,7 +17,7 @@ class KAODataWrapper {
     var length: Int { return lengthWithPurged }
 
     func appendData(data: NSData) {
-        self.data.appendData(data)
+        self.data.append(data as Data)
         self.lengthWithPurged += data.length
     }
 
@@ -27,20 +27,20 @@ class KAODataWrapper {
 
             let adjustedLocation = range.location - (lengthWithPurged - self.data.length)
 
-            self.data = NSMutableData(data: self.data.subdataWithRange(NSRange(location: adjustedLocation, length: self.data.length - adjustedLocation)))
+            self.data = NSMutableData(data: self.data.subdata(with: NSRange(location: adjustedLocation, length: self.data.length - adjustedLocation)))
 
-            let requestedData = self.data.subdataWithRange(NSRange(location: 0, length: range.length))
+            let requestedData = self.data.subdata(with: NSRange(location: 0, length: range.length))
 
-            self.data = NSMutableData(data: self.data.subdataWithRange(NSRange(location: range.length, length: self.data.length - range.length)))
+            self.data = NSMutableData(data: self.data.subdata(with: NSRange(location: range.length, length: self.data.length - range.length)))
 
-            return requestedData
+            return requestedData as NSData
         }
         else {
-            return self.data.subdataWithRange(range)
+            return self.data.subdata(with: range) as NSData
         }
     }
 
-    func writeToFile(path: String, options writeOptionsMask: NSDataWritingOptions) throws {
-        try self.data.writeToFile(path, options: writeOptionsMask)
+    func writeToFile(path: String, options writeOptionsMask: NSData.WritingOptions) throws {
+        try self.data.write(toFile: path, options: writeOptionsMask)
     }
 }
